@@ -60,7 +60,7 @@ class Product(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text, nullable=True)
     precio = db.Column(db.Numeric(10, 2), nullable=False)
-    imagen_url = db.Column(db.String(255), nullable=True)
+    imagen_url = db.Column(db.Text, nullable=True)  # <--- MODIFICADO AQUÍ DE db.String(255) a db.Text para soportar Base64
     disponible = db.Column(db.Boolean, default=True)
     
     # Relación de 1 a N: Un producto puede tener complementos u opciones (ej. bebidas, extras)

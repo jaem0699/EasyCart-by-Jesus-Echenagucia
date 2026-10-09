@@ -1,9 +1,30 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.models import db, Restaurant
+from itsdangerous import URLSafeTimedSerializer
+import os
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+# Clave y salt para firmar los tokens temporales de recuperación
+SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT', 'recovery-salt-key-easycart')
+
+def generar_token_recuperacion(email):
+    serializer = URLSafeTimedSerializer(os.getenv('SECRET_KEY', 'tu-secret-key-muy-segura'))
+    return serializer.dumps(email, salt=SECURITY_PASSWORD_SALT)
+
+def confirmar_token_recuperacion(token, expiration=3600): # Expira en 1 hora (3600 segundos)
+    serializer = URLSafeTimedSerializer(os.getenv('SECRET_KEY', 'tu-secret-key-muy-segura'))
+    try:
+        email = serializer.loads(
+            token,
+            salt=SECURITY_PASSWORD_SALT,
+            max_age=expiration
+        )
+    except Exception:
+        return None
+    return email
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -50,11 +71,88 @@ def login():
     if not restaurant or not check_password_hash(restaurant.password_hash, data['password']):
         return jsonify({"error": "Credenciales inválidas"}), 401
         
-    # Generamos el token JWT guardando el ID del restaurante como identidad (convertido a string)
     access_token = create_access_token(identity=str(restaurant.id))
     
     return jsonify({
         "message": "Inicio de sesión exitoso",
         "access_token": access_token,
+        "restaurant": restaurant.to_dict()
+    }), 200
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({"error": "Se requiere el correo electrónico"}), 400
+        
+    email = data.get('email')
+    restaurant = Restaurant.query.filter_by(email=email).first()
+    
+    if restaurant:
+        token = generar_token_recuperacion(email)
+        enlace_reset = f"http://localhost:5173/reset-password?token={token}"
+        # Aquí se simula la impresión en consola; luego puedes integrarlo con Flask-Mail
+        print(f"--- ENLACE DE RECUPERACIÓN PARA {email} ---")
+        print(enlace_reset)
+        print("-------------------------------------------")
+        
+    return jsonify({
+        "message": "Si el correo está registrado, recibirás las instrucciones de recuperación."
+    }), 200
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    if not data or not data.get('token') or not data.get('password'):
+        return jsonify({"error": "Faltan datos obligatorios (token o contraseña)"}), 400
+        
+    token = data.get('token')
+    nueva_password = data.get('password')
+    
+    email = confirmar_token_recuperacion(token)
+    if not email:
+        return jsonify({"error": "El enlace de recuperación es inválido o ha expirado."}), 400
+        
+    restaurant = Restaurant.query.filter_by(email=email).first()
+    if not restaurant:
+        return jsonify({"error": "Restaurante no encontrado."}), 404
+        
+    restaurant.password_hash = generate_password_hash(nueva_password)
+    db.session.commit()
+    
+    return jsonify({"message": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión."}), 200
+
+@auth_bp.route('/perfil', methods=['GET'])
+@jwt_required()
+def obtener_perfil():
+    current_restaurant_id = get_jwt_identity()
+    restaurant = Restaurant.query.get(current_restaurant_id)
+    if not restaurant:
+        return jsonify({"error": "Restaurante no encontrado"}), 404
+    return jsonify(restaurant.to_dict()), 200
+
+@auth_bp.route('/perfil', methods=['PUT'])
+@jwt_required()
+def actualizar_perfil():
+    current_restaurant_id = get_jwt_identity()
+    restaurant = Restaurant.query.get(current_restaurant_id)
+    if not restaurant:
+        return jsonify({"error": "Restaurante no encontrado"}), 404
+    
+    data = request.get_json()
+    
+    if 'nombre' in data:
+        restaurant.nombre = data['nombre']
+    if 'whatsapp_numero' in data:
+        restaurant.whatsapp_numero = data['whatsapp_numero']
+    if 'color_primario' in data:
+        restaurant.color_primario = data['color_primario']
+    if 'moneda' in data:
+        restaurant.moneda = data['moneda']
+        
+    db.session.commit()
+    
+    return jsonify({
+        "message": "Perfil y configuración actualizados con éxito",
         "restaurant": restaurant.to_dict()
     }), 200
