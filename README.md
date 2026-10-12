@@ -124,13 +124,9 @@ Configura tus variables de entorno creando un archivo `.env` en la raíz del pro
 
 
 
-FLASK_APP=app.py
-
-FLASK_ENV=development
-
-SQLALCHEMY_DATABASE_URI=mysql+pymysql://usuario:contraseña@localhost:3306/easycart_db
-
-SECRET_KEY=tu_clave_secreta
+DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost:3306/easycart_db
+SECRET_KEY=tu_clave_secreta_muy_segura
+JWT_SECRET_KEY=tu_clave_secreta_para_los_tokens_jwt
 
 
 
@@ -138,21 +134,30 @@ SECRET_KEY=tu_clave_secreta
 
 
 
-cd client
+cd frontend
 
 npm install
 
-npm run build 
+npm run dev 
 
 
 
 ### 4. Ejecución del Servidor
 
 
+cd backend
 
-# Regresar a la raíz y correr Flask
+# Activar entorno virtual
+# En Bash / Git Bash:
+source ../.venv/Scripts/activate
 
-flask run
+# En PowerShell:
+..\.venv\Scripts\Activate.ps1
+
+# En CMD:
+..\.venv\Scripts\activate.bat
+
+python run.py
 
 
 

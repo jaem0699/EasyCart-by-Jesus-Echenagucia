@@ -122,6 +122,7 @@ def reset_password():
     
     return jsonify({"message": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión."}), 200
 
+# --- OBTENER PERFIL DEL RESTAURANTE ---
 @auth_bp.route('/perfil', methods=['GET'])
 @jwt_required()
 def obtener_perfil():
@@ -131,6 +132,8 @@ def obtener_perfil():
         return jsonify({"error": "Restaurante no encontrado"}), 404
     return jsonify(restaurant.to_dict()), 200
 
+
+# --- ACTUALIZAR PERFIL Y BRANDING DEL RESTAURANTE ---
 @auth_bp.route('/perfil', methods=['PUT'])
 @jwt_required()
 def actualizar_perfil():
@@ -138,9 +141,9 @@ def actualizar_perfil():
     restaurant = Restaurant.query.get(current_restaurant_id)
     if not restaurant:
         return jsonify({"error": "Restaurante no encontrado"}), 404
-    
+
     data = request.get_json()
-    
+
     if 'nombre' in data:
         restaurant.nombre = data['nombre']
     if 'whatsapp_numero' in data:
@@ -149,9 +152,11 @@ def actualizar_perfil():
         restaurant.color_primario = data['color_primario']
     if 'moneda' in data:
         restaurant.moneda = data['moneda']
-        
+    if 'logo_url' in data:
+        restaurant.logo_url = data['logo_url']  # Soporte para foto/logo del restaurante en Base64 o URL
+
     db.session.commit()
-    
+
     return jsonify({
         "message": "Perfil y configuración actualizados con éxito",
         "restaurant": restaurant.to_dict()
