@@ -1,4 +1,4 @@
-# 🍽️ EasyCart SaaS
+# 🍽️ EasyCart
 
 
 
@@ -125,7 +125,9 @@ Configura tus variables de entorno creando un archivo `.env` en la raíz del pro
 
 
 DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost:3306/easycart_db
+
 SECRET_KEY=tu_clave_secreta_muy_segura
+
 JWT_SECRET_KEY=tu_clave_secreta_para_los_tokens_jwt
 
 
